@@ -12,59 +12,8 @@ import {
 } from '@/lib/db/schema'
 import { getProvider } from '@/lib/providers'
 import type { ProviderEvent } from '@/lib/providers/types'
+import { extractPayment, type ExtractedPayment } from '@/lib/providers/normalize'
 import { enqueue } from '@/lib/jobs'
-
-type ExtractedPayment = {
-  reference?: string
-  providerSessionId?: string
-  providerReference?: string
-  status: 'pending' | 'succeeded' | 'failed'
-  amount?: string
-  currency?: string
-}
-
-/** Provider-specific event normalization. Keep provider knowledge out of the
- * billing engine: each known event maps to a small, uniform payment shape. */
-function extractPayment(event: ProviderEvent): ExtractedPayment {
-  const data = event.data as Record<string, unknown>
-  const string = (value: unknown) => (typeof value === 'string' ? value : value == null ? undefined : String(value))
-
-  if (event.provider === 'bachs') {
-    const succeeded = event.type === 'collection.succeeded' || event.type === 'checkout.completed'
-    return {
-      reference: string(data.reference),
-      providerSessionId: string(data.checkout_id),
-      providerReference: string(data.charge_id),
-      status: succeeded ? 'succeeded' : event.type === 'collection.failed' ? 'failed' : 'pending',
-      amount: string(data.amount),
-      currency: string(data.currency),
-    }
-  }
-
-  if (event.provider === 'paystack') {
-    const status = string(data.status)
-    return {
-      reference: string(data.reference),
-      providerReference: string(data.reference),
-      status: event.type === 'charge.success' || status === 'success' ? 'succeeded' : status === 'failed' ? 'failed' : 'pending',
-      amount: string(data.amount),
-      currency: string(data.currency),
-    }
-  }
-
-  if (event.provider === 'flutterwave') {
-    const status = string(data.status)
-    return {
-      reference: string(data.tx_ref),
-      providerReference: string(data.id),
-      status: event.type === 'charge.completed' && status === 'successful' ? 'succeeded' : status === 'failed' ? 'failed' : 'pending',
-      amount: string(data.amount),
-      currency: string(data.currency),
-    }
-  }
-
-  return { status: 'pending' }
-}
 
 /**
  * Fulfil a verified provider event. Safe to call repeatedly: the checkout

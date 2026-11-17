@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { env } from '@/lib/env'
 import { processJobs } from '@/lib/jobs'
 import { registerJobHandlers } from '@/lib/jobs/handlers'
+import { pruneRateLimits } from '@/lib/security/rate-limit'
 
 registerJobHandlers()
 
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  await pruneRateLimits()
   const processed = await processJobs(20)
   return NextResponse.json({ processed })
 }

@@ -1,61 +1,13 @@
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { checkout, customer, price, subscription } from '@/lib/db/schema'
 import { getProvider } from '@/lib/providers'
 import type { ProviderEvent } from '@/lib/providers/types'
+import { interpretSubscriptionEvent } from '@/lib/providers/normalize'
 import { enqueue } from '@/lib/jobs'
 
 type SubscriptionEventData = Record<string, unknown>
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? undefined : String(v))
-
-/** Map provider + event to a subscription status and identifiers.
- * Keeps provider knowledge out of the rest of the billing engine. */
-function interpretSubscriptionEvent(event: ProviderEvent): {
-  status?: string
-  providerSubscriptionId?: string
-  managementToken?: string
-  periodStart?: Date
-  periodEnd?: Date
-  cancelAtPeriodEnd?: boolean
-} | null {
-  const data = event.data as SubscriptionEventData
-
-  if (event.provider === 'bachs') {
-    // customer.subscription.created|updated|deleted; data is the subscription object
-    if (!event.type.startsWith('customer.subscription.')) return null
-    const deleted = event.type === 'customer.subscription.deleted'
-    return {
-      status: deleted ? 'canceled' : str(data.status),
-      providerSubscriptionId: str(data.id),
-      periodStart: data.current_period_start ? new Date(String(data.current_period_start)) : undefined,
-      periodEnd: data.current_period_end ? new Date(String(data.current_period_end)) : undefined,
-      cancelAtPeriodEnd: data.cancel_at_period_end === true,
-    }
-  }
-
-  if (event.provider === 'paystack') {
-    // subscription.create | subscription.disable | subscription.not_renew
-    if (!event.type.startsWith('subscription.')) return null
-    const nested = (data.subscription ?? data) as SubscriptionEventData
-    return {
-      status:
-        event.type === 'subscription.disable' ? 'canceled'
-          : event.type === 'subscription.not_renew' ? 'active'
-            : 'active',
-      providerSubscriptionId: str(nested.subscription_code) ?? str(nested.id),
-      managementToken: str(nested.email_token),
-      periodEnd: nested.next_payment_date ? new Date(String(nested.next_payment_date)) : undefined,
-      cancelAtPeriodEnd: event.type === 'subscription.not_renew',
-    }
-  }
-
-  if (event.provider === 'flutterwave') {
-    if (event.type !== 'subscription.cancelled') return null
-    return { status: 'canceled', providerSubscriptionId: str((data.plan as SubscriptionEventData | undefined)?.id) }
-  }
-
-  return null
-}
 
 /** Apply a provider subscription event. Idempotent by provider id + event ordering. */
 export async function applySubscriptionEvent(event: ProviderEvent) {

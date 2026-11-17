@@ -24,10 +24,12 @@ The core product is implemented end to end:
 - Customer portal with signed, expiring tokens (no customer accounts) and PDF invoices
 - Full admin dashboard (overview, products, customers, orders, subscriptions, settings)
 - Database-backed job queue with a platform-agnostic cron tick
+- Rate limiting on auth/checkout/portal routes (DB-backed + BetterAuth rules)
+- Offline + live sandbox provider verification harness (`pnpm verify:providers`)
 - Deploy configs and docs for Cloudflare, Vercel, Netlify and self-hosting
 
 Done: security review, dependency audit (high-severity Drizzle advisory fixed),
-backup/restore documentation, CI workflow.
+backup/restore documentation, CI workflow, provider verification harness.
 
 **Before real money moves:** verify each provider adapter against sandbox
 credentials (the API contracts come from published docs, not live keys). See
@@ -60,6 +62,7 @@ Pick a target:
 
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — accepted architecture decisions
 - [`docs/SECURITY-REVIEW.md`](./docs/SECURITY-REVIEW.md) — security design and checklist
+- [`docs/PROVIDER-VERIFICATION.md`](./docs/PROVIDER-VERIFICATION.md) — verify adapters against sandbox APIs
 - [`ATTRIBUTION.md`](./ATTRIBUTION.md) — provenance and licensing of adapted components
 
 The Polar research reports and implementation plan live outside this repository

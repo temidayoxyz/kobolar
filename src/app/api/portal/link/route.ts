@@ -5,11 +5,24 @@ import { db } from '@/lib/db'
 import { customer } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { createPortalToken } from '@/lib/portal/token'
+import { checkRateLimit, clientIp } from '@/lib/security/rate-limit'
 
 /** Admin-only: create a magic link that gives a customer portal access. */
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const limit = await checkRateLimit({
+    key: `portal-link:${clientIp(request)}`,
+    max: 20,
+    windowSeconds: 60,
+  })
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } },
+    )
+  }
 
   const body = (await request.json()) as { customerId?: string; email?: string }
   let customerId = body.customerId

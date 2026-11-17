@@ -17,15 +17,19 @@ starting point, not a certification.
 | Admin | All `/api/admin/*` routes call `auth.api.getSession`; dashboard layout redirects unauthenticated users | admin routes, dashboard layout |
 | Auth | BetterAuth email/password with verification, recovery, secure cookie sessions | `src/lib/auth/index.ts` |
 | Headers | CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy on all responses | `src/lib/security/headers.ts`, `src/proxy.ts` |
+| Rate limiting | DB-backed fixed-window limiter on auth/checkout/portal routes plus BetterAuth per-route rules | `src/lib/security/rate-limit.ts`, `src/lib/auth/index.ts` |
 | SQL injection | All queries via Drizzle parameterized queries; no string concatenation of user input | `src/lib/db/*` |
 | Money | Decimal arithmetic via big.js; integer/decimal conversions isolated in providers | `src/lib/money`, providers |
 | Audit | Provider events and audit_log table record significant actions | schema, intake |
 
 ## Threat notes / residual risks
 
-- **Rate limiting is not implemented.** Admin login, checkout creation and portal
-  token endpoints should be rate-limited at the edge/proxy in production (e.g.
-  Cloudflare Rate Limiting, Vercel WAF). This is a known gap.
+- **Rate limiting is implemented** via `src/lib/security/rate-limit.ts`, a
+  DB-backed fixed-window limiter that works on every deployment target. Applied
+  to auth (30/min per IP), checkout (10/min), and portal link creation (20/min).
+  BetterAuth additionally applies per-route rules (e.g. sign-in 10/min).
+  For high-volume abuse, add platform WAF rules on top (Cloudflare Rate
+  Limiting, Vercel WAF); the DB limiter is designed for baseline protection.
 - **CSRF:** BetterAuth cookies are SameSite=Lax by default; state-changing
   Route Handlers rely on this plus JSON content type. Consider explicit CSRF
   tokens if embedding in third-party contexts (not supported by design).
@@ -50,7 +54,7 @@ starting point, not a certification.
 
 ## Recommendations before production
 
-1. Add edge rate limiting on `/api/auth/*`, `/api/checkout`, `/api/portal/*`.
+1. Verify each provider against its sandbox (`docs/PROVIDER-VERIFICATION.md`).
 2. Run `pnpm audit` and update any vulnerable dependencies.
 3. Rotate all dev default secrets; verify production env validation throws when
    they are missing.

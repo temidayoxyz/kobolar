@@ -12,6 +12,7 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "tsx scripts/migrate.ts",
     "test": "vitest run",
+    "verify:providers": "tsx scripts/verify-providers.ts",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare deploy"

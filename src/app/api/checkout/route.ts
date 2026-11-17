@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createCheckout, CheckoutError } from '@/lib/billing/checkout'
+import { checkRateLimit, clientIp } from '@/lib/security/rate-limit'
 
 const schema = z.object({
   priceId: z.string().uuid(),
@@ -11,6 +12,18 @@ const schema = z.object({
 })
 
 export async function POST(request: Request) {
+  const limit = await checkRateLimit({
+    key: `checkout:${clientIp(request)}`,
+    max: 10,
+    windowSeconds: 60,
+  })
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } },
+    )
+  }
+
   const parsed = schema.safeParse(await request.json())
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid checkout input', details: parsed.error.flatten() }, { status: 422 })

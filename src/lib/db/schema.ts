@@ -273,6 +273,13 @@ export const jobQueue = pgTable('job_queue', {
   completedAt: timestamp('completed_at', { withTimezone: true }),
 }, (t) => [index('job_queue_pending_idx').on(t.status, t.runAt)])
 
+// Rate limiting (fixed window, keyed by identifier + bucket).
+export const rateLimit = pgTable('rate_limit', {
+  key: text('key').primaryKey(),
+  count: integer('count').notNull().default(1),
+  windowEnd: timestamp('window_end', { withTimezone: true }).notNull(),
+})
+
 export const auditLog = pgTable('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
   actorType: text('actor_type').notNull(), // admin | customer | system | provider

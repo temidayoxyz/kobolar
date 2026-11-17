@@ -7,6 +7,17 @@ import { sendEmail } from '@/lib/email'
 
 export const auth = betterAuth({
   appName: 'Kobolar',
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+    customRules: {
+      '/signIn/email': { window: 60, max: 10 },
+      '/signUp/email': { window: 60, max: 5 },
+      '/requestPasswordReset': { window: 60, max: 5 },
+      '/sendVerificationEmail': { window: 60, max: 5 },
+    },
+  },
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL ?? env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   database: drizzleAdapter(db, {

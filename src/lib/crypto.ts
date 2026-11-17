@@ -3,7 +3,7 @@ import { env } from '@/lib/env'
 /** AES-GCM envelope for provider credentials stored in the business row.
  * Uses Web Crypto so it works on every deployment target. */
 async function key(): Promise<CryptoKey> {
-  const secret = env.APP_ENCRYPTION_KEY ?? 'dev-only-encryption-key-change-me-000000000000'
+  const secret = env.APP_ENCRYPTION_KEY
   const material = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret))
   return crypto.subtle.importKey('raw', material, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
 }

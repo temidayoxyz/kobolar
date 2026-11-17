@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/tick?secret=replace-with-JOB_CRON_SECRET",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

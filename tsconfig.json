@@ -64,6 +64,7 @@
   ],
   "exclude": [
     "node_modules",
-    "packages/*/dist"
+    "packages/*/dist",
+    "open-next.config.ts"
   ]
 }

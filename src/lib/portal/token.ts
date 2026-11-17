@@ -1,6 +1,7 @@
+import { env } from '@/lib/env'
 import { hmacHex, timingSafeEqual } from '@/lib/providers/shared'
 
-const SECRET = process.env.BETTER_AUTH_SECRET ?? 'dev-only-secret-change-me-before-production-000001'
+const SECRET = env.BETTER_AUTH_SECRET
 const TTL_SECONDS = 60 * 60 * 24 * 30
 
 function base64urlEncode(value: string): string {

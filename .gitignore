@@ -11,3 +11,7 @@ coverage/
 .vercel
 .wrangler/
 .netlify/
+.open-next/
+.dev.vars*
+bundled/
+tsconfig.tsbuildinfo

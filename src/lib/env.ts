@@ -1,35 +1,62 @@
 import { z } from 'zod'
 
-/**
- * Runtime values are read directly so a production build never fails just
- * because deployment secrets are not present at build time. Call
- * `validateEnv()` at process start (or in a health check) to fail fast in
- * production when a required secret is missing.
- */
+const optionalUrl = z.string().url().optional()
+
 const schema = z.object({
   DATABASE_URL: z.string().min(1),
-  BETTER_AUTH_SECRET: z.string().min(16),
-  BETTER_AUTH_URL: z.string().url().optional(),
-  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
-  JOB_CRON_SECRET: z.string().min(16),
-  APP_ENCRYPTION_KEY: z.string().min(32).optional(),
+  BETTER_AUTH_SECRET: z.string().min(32),
+  BETTER_AUTH_URL: optionalUrl,
+  NEXT_PUBLIC_APP_URL: optionalUrl,
+  JOB_CRON_SECRET: z.string().min(32),
+  APP_ENCRYPTION_KEY: z.string().min(32),
   EMAIL_PROVIDER: z.enum(['resend', 'sendbyte', 'log']).default('log'),
   EMAIL_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().email().optional(),
 })
 
-export function validateEnv() {
+const DEV_DEFAULTS = {
+  DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/kobolar',
+  BETTER_AUTH_SECRET: 'dev-only-secret-change-me-before-production-000001',
+  BETTER_AUTH_URL: 'http://localhost:3000',
+  NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+  JOB_CRON_SECRET: 'dev-only-cron-secret-change-me-before-production-00001',
+  APP_ENCRYPTION_KEY: 'dev-only-encryption-key-change-me-before-production-0001',
+  EMAIL_PROVIDER: 'log' as const,
+  EMAIL_API_KEY: undefined as string | undefined,
+  EMAIL_FROM: undefined as string | undefined,
+}
+
+/** `next build` runs with NODE_ENV=production but without runtime secrets, so
+ * we must not fail the build for missing env vars. We enforce them at runtime
+ * in a health check instead (see `assertRuntimeEnv`). */
+const isBuildPhase =
+  process.env.NEXT_PHASE === 'phase-production-build' ||
+  process.env.NEXT_PHASE === 'phase-development-server' ||
+  process.env.NEXT_PHASE === 'phase-production-server'
+
+/** Reads env values. Dev defaults are non-functional for real money and are
+ * never used in a correctly configured production runtime. */
+export const env = (() => {
+  const source = process.env.NODE_ENV === 'production' && !isBuildPhase
+    ? process.env
+    : { ...DEV_DEFAULTS, ...process.env }
+
+  const parsed = schema.safeParse(source)
+  if (!parsed.success) {
+    if (process.env.NODE_ENV === 'production' && !isBuildPhase) {
+      throw new Error(`Invalid production environment: ${parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(', ')}`)
+    }
+    return { ...DEV_DEFAULTS } as z.infer<typeof schema>
+  }
+  return parsed.data
+})()
+
+/** Call at runtime (e.g. in a health endpoint or request bootstrap) to assert
+ * the deployment is configured for production. */
+export function assertRuntimeEnv() {
   return schema.parse(process.env)
 }
 
-export const env = {
-  DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://localhost:5432/kobolar',
-  BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? 'dev-only-secret-change-me-before-production-000001',
-  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  JOB_CRON_SECRET: process.env.JOB_CRON_SECRET ?? 'dev-only-cron-secret-0001',
-  APP_ENCRYPTION_KEY: process.env.APP_ENCRYPTION_KEY,
-  EMAIL_PROVIDER: (process.env.EMAIL_PROVIDER ?? 'log') as 'resend' | 'sendbyte' | 'log',
-  EMAIL_API_KEY: process.env.EMAIL_API_KEY,
-  EMAIL_FROM: process.env.EMAIL_FROM,
+export function validateEnv() {
+  return assertRuntimeEnv()
 }

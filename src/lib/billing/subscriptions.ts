@@ -20,26 +20,32 @@ export async function applySubscriptionEvent(event: ProviderEvent) {
     : undefined
 
   if (!existing) {
-    // Try to resolve via a checkout reference carried in event metadata/data.
-    const reference = str((event.data as SubscriptionEventData).checkout_id) ?? str((event.data as SubscriptionEventData).reference)
-    if (reference) {
-      const checkoutRow = (await db.select().from(checkout).where(eq(checkout.reference, reference)).limit(1))[0]
-      if (checkoutRow) {
-        const [priceRow] = await db.select().from(price).where(eq(price.id, checkoutRow.priceId)).limit(1)
-        const [customerRow] = await db.select().from(customer).where(eq(customer.email, checkoutRow.customerEmail ?? '')).limit(1)
-        if (priceRow && customerRow && interpreted.providerSubscriptionId) {
-          existing = (await db.insert(subscription).values({
-            customerId: customerRow.id,
-            priceId: priceRow.id,
-            provider: event.provider,
-            providerSubscriptionId: interpreted.providerSubscriptionId,
-            status: 'incomplete',
-            managementToken: interpreted.managementToken,
-            currentPeriodStart: interpreted.periodStart,
-            currentPeriodEnd: interpreted.periodEnd,
-            metadata: { source: 'subscription-event' },
-          }).returning())[0]
-        }
+    // Try to resolve via either our own reference or a provider session id
+    // carried in the event. Different providers use different field names.
+    const data = event.data as SubscriptionEventData
+    const candidates = [str(data.reference), str(data.checkout_id)].filter(Boolean) as string[]
+    let checkoutRow: typeof checkout.$inferSelect | undefined
+    for (const candidate of candidates) {
+      checkoutRow = (await db.select().from(checkout).where(eq(checkout.reference, candidate)).limit(1))[0]
+      if (checkoutRow) break
+      checkoutRow = (await db.select().from(checkout).where(eq(checkout.providerSessionId, candidate)).limit(1))[0]
+      if (checkoutRow) break
+    }
+    if (checkoutRow) {
+      const [priceRow] = await db.select().from(price).where(eq(price.id, checkoutRow.priceId)).limit(1)
+      const [customerRow] = await db.select().from(customer).where(eq(customer.email, checkoutRow.customerEmail ?? '')).limit(1)
+      if (priceRow && customerRow && interpreted.providerSubscriptionId) {
+        existing = (await db.insert(subscription).values({
+          customerId: customerRow.id,
+          priceId: priceRow.id,
+          provider: event.provider,
+          providerSubscriptionId: interpreted.providerSubscriptionId,
+          status: 'incomplete',
+          managementToken: interpreted.managementToken,
+          currentPeriodStart: interpreted.periodStart,
+          currentPeriodEnd: interpreted.periodEnd,
+          metadata: { source: 'subscription-event', ...(data.demo === true ? { demo: true } : {}) },
+        }).returning())[0]
       }
     }
   }
@@ -74,15 +80,23 @@ export async function cancelSubscription(subscriptionId: string, options: { atPe
   if (!sub) throw new Error('Subscription not found')
   if (sub.status === 'canceled') return { canceled: true, already: true }
 
-  const provider = await getProvider()
-  if (!provider.cancelSubscription) {
-    throw new Error(`Provider ${sub.provider} does not support cancellation`)
+  // Demo subscriptions have a synthetic provider id and are never sent to the
+  // provider. Only mark them locally. Hard-disabled in production.
+  const isDemo = (sub.metadata as Record<string, unknown>)?.demo === true
+  if (isDemo) {
+    if (process.env.NODE_ENV === 'production' || process.env.DEMO_MODE !== 'true') {
+      throw new Error('Demo subscriptions cannot be cancelled outside demo mode')
+    }
+  } else {
+    const provider = await getProvider()
+    if (!provider.cancelSubscription) {
+      throw new Error(`Provider ${sub.provider} does not support cancellation`)
+    }
+    await provider.cancelSubscription(sub.providerSubscriptionId, {
+      atPeriodEnd: options.atPeriodEnd ?? true,
+      token: sub.managementToken ?? undefined,
+    })
   }
-
-  await provider.cancelSubscription(sub.providerSubscriptionId, {
-    atPeriodEnd: options.atPeriodEnd ?? true,
-    token: sub.managementToken ?? undefined,
-  })
 
   // Native providers echo the change via webhook. Update optimistically so the
   // UI is correct immediately; the webhook is the final source of truth.

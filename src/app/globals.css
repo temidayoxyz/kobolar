@@ -93,21 +93,41 @@
   --primary: var(--charcoal);
   --primary-foreground: var(--cream);
   --muted: var(--stone);
+  --muted-foreground: #6f6d66;
   --border: #d9d2c5;
   --radius: 0.75rem;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
 }
 
 .dark {
-  --cream: #292a29;
+  /* Override the --color-* variables that Tailwind v4 utilities read. */
+  --color-background: #1e1f1e;
+  --color-foreground: #f5f0e6;
+  --color-card: #292a29;
+  --color-primary: #f5f0e6;
+  --color-primary-foreground: #292a29;
+  --color-muted: #3a3b39;
+  --color-muted-foreground: #a5a39b;
+  --color-border: #454641;
+  /* Aliases used by base layer and Orbit mappings. */
+  --cream: #f5f0e6;
   --stone: #3a3b39;
-  --charcoal: #f5f0e6;
-  --background: #1e1f1e;
-  --foreground: #f5f0e6;
-  --card: #292a29;
-  --primary: #f5f0e6;
-  --primary-foreground: #292a29;
-  --muted: #3a3b39;
-  --border: #454641;
+  --charcoal: #292a29;
+  --background: var(--color-background);
+  --foreground: var(--color-foreground);
+  --card: var(--color-card);
+  --primary: var(--color-primary);
+  --primary-foreground: var(--color-primary-foreground);
+  --muted: var(--color-muted);
+  --muted-foreground: var(--color-muted-foreground);
+  --border: var(--color-border);
 }
 
 @layer base {

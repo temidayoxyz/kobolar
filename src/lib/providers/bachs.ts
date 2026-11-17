@@ -10,10 +10,16 @@ import type {
 } from './types'
 import { hmacHex, providerFetch, timingSafeEqual } from './shared'
 
-const BASE_URL = process.env.BACHS_BASE_URL ?? 'https://api.bachs.io'
 const WEBHOOK_TOLERANCE_SECONDS = 300
 
 export function bachsProvider(credentials: { apiKey: string; webhookSecret: string }): PaymentProvider {
+  // Sandbox keys only work against the sandbox URL; live keys against live.
+  // Deriving it from the key prevents an accidental wrong-environment call.
+  const baseUrl =
+    process.env.BACHS_BASE_URL ??
+    (credentials.apiKey.startsWith('sk_sandbox_')
+      ? 'https://sandbox-api.bachs.io'
+      : 'https://api.bachs.io')
   const auth = { Authorization: `Bearer ${credentials.apiKey}` }
 
   async function verifyWebhook(rawBody: string, headers: Headers): Promise<ProviderEvent> {
@@ -81,15 +87,16 @@ export function bachsProvider(credentials: { apiKey: string; webhookSecret: stri
         cancel_url: input.cancelUrl,
         metadata: input.metadata ?? {},
       }
-      if (input.recurring) {
-        payload.product_cart = input.recurring.planId
-          ? [{ product_id: input.recurring.planId }]
-          : []
+      // A recurring checkout needs a catalog product on the provider side.
+      // If no plan id is configured, fall back to raw pricing so the checkout
+      // is still creatable; Kobolar still records the subscription locally.
+      if (input.recurring?.planId) {
+        payload.product_cart = [{ product_id: input.recurring.planId }]
       } else {
         payload.pricing = { currency: input.currency, amount: input.amount }
       }
 
-      const result = (await providerFetch(`${BASE_URL}/v1/checkout-sessions`, {
+      const result = (await providerFetch(`${baseUrl}/v1/checkout-sessions`, {
         method: 'POST',
         headers: auth,
         body: payload,
@@ -106,7 +113,7 @@ export function bachsProvider(credentials: { apiKey: string; webhookSecret: stri
     verifyWebhook,
 
     async getPayment(providerReference: string): Promise<ProviderPayment> {
-      const result = (await providerFetch(`${BASE_URL}/v1/payments/${encodeURIComponent(providerReference)}`, {
+      const result = (await providerFetch(`${baseUrl}/v1/payments/${encodeURIComponent(providerReference)}`, {
         headers: auth,
       })) as {
         id: string
@@ -126,7 +133,7 @@ export function bachsProvider(credentials: { apiKey: string; webhookSecret: stri
     },
 
     async refund(input: RefundInput): Promise<RefundResult> {
-      const result = (await providerFetch(`${BASE_URL}/v1/refunds`, {
+      const result = (await providerFetch(`${baseUrl}/v1/refunds`, {
         method: 'POST',
         headers: auth,
         body: { charge_id: input.providerReference, amount: input.amount, reason: input.reason },
@@ -139,7 +146,7 @@ export function bachsProvider(credentials: { apiKey: string; webhookSecret: stri
     },
 
     async getSubscription(providerSubscriptionId: string) {
-      const result = (await providerFetch(`${BASE_URL}/v1/subscriptions/${encodeURIComponent(providerSubscriptionId)}`, {
+      const result = (await providerFetch(`${baseUrl}/v1/subscriptions/${encodeURIComponent(providerSubscriptionId)}`, {
         headers: auth,
       })) as {
         status: string
@@ -157,7 +164,7 @@ export function bachsProvider(credentials: { apiKey: string; webhookSecret: stri
 
     // Verified: DELETE /v1/subscriptions/{id} with { cancel_at_period_end, reason }.
     async cancelSubscription(providerSubscriptionId: string, options?: { atPeriodEnd?: boolean }) {
-      await providerFetch(`${BASE_URL}/v1/subscriptions/${encodeURIComponent(providerSubscriptionId)}`, {
+      await providerFetch(`${baseUrl}/v1/subscriptions/${encodeURIComponent(providerSubscriptionId)}`, {
         method: 'DELETE',
         headers: auth,
         body: { cancel_at_period_end: options?.atPeriodEnd ?? true },
@@ -176,3 +183,4 @@ export const bachsCapabilities: ProviderCapabilities = {
   currencies: ['NGN', 'USD'],
   webhookEvents: [],
 }
+

@@ -19,7 +19,19 @@ import { enqueue } from '@/lib/jobs'
  * Fulfil a verified provider event. Safe to call repeatedly: the checkout
  * status guard and the unique payment reference prevent double-fulfilment.
  */
-export async function fulfillPaymentEvent(event: ProviderEvent) {
+export async function fulfillPaymentEvent(
+  event: ProviderEvent,
+  options: { skipRemoteVerification?: boolean } = {},
+) {
+  // Demo mode exists so the full order/invoice/receipt path can be exercised
+  // locally without a provider webhook reaching localhost. It is hard-disabled
+  // in production and always only touches the local database.
+  if (options.skipRemoteVerification) {
+    if (process.env.NODE_ENV === 'production' || process.env.DEMO_MODE !== 'true') {
+      throw new Error('Demo fulfilment is disabled')
+    }
+  }
+
   const extracted = extractPayment(event)
   if (extracted.status !== 'succeeded') return { fulfilled: false, reason: 'not a success event' }
 
@@ -35,7 +47,7 @@ export async function fulfillPaymentEvent(event: ProviderEvent) {
   // Server-side verification: never trust a webhook or redirect alone.
   const provider = await getProvider()
   let verified = extracted as ExtractedPayment & { source: 'event' | 'provider' }
-  if (extracted.providerReference) {
+  if (extracted.providerReference && !options.skipRemoteVerification) {
     try {
       const remote = await provider.getPayment(extracted.providerReference)
       if (remote.status !== 'succeeded') return { fulfilled: false, reason: 'provider reports payment not successful' }

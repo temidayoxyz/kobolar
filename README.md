@@ -10,7 +10,7 @@ developers. One business per installation. Serverless-first, Docker-optional.
 
 ## Status
 
-Phase 1 foundation. Implemented:
+Phases 1–3 substantially implemented. Implemented:
 
 - Next.js 16 + React 19 + TypeScript application shell
 - Vendored Polar Orbit design system and UI packages (rebranded, OFL fonts only)
@@ -21,8 +21,20 @@ Phase 1 foundation. Implemented:
 - Database-backed job queue with a platform-agnostic cron tick
 - Interchangeable email adapter (log / Resend / Sendbyte Africa)
 
-Next phases: payment provider adapters (Bachs first, then Paystack and
-Flutterwave), core billing, subscriptions, customer portal, reliability.
+Also implemented: provider adapters (Bachs, Paystack, Flutterwave) with
+capability detection; hosted checkout; idempotent webhook intake →
+server-verified order/payment/invoice/receipt; customer portal with signed
+tokens and downloadable PDF invoices.
+
+Next phases: subscription renewal processing and cancellation, admin dashboard
+UI for products and customers, per-platform deployment verification, security
+review, sandbox payment tests, and open-source release preparation.
+
+**Important:** provider adapters were written against each provider's published
+API contract. Bachs and Flutterwave were verified from their live docs in this
+session; Paystack's docs block automated fetching, so its exact request/response
+fields must be re-verified against the live API reference before production.
+No adapter is certified for live money movement until sandbox tests pass.
 
 ## Local development
 

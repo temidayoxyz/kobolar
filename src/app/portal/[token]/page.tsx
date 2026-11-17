@@ -48,7 +48,12 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
           {invoices.map((doc) => (
             <div key={doc.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
               <span className="text-sm font-medium">{doc.number}</span>
-              <span className="text-xs capitalize text-muted-foreground">{doc.status}</span>
+              <a
+                href={`/api/customer-portal/invoices/${doc.id}/pdf?token=${encodeURIComponent(token)}`}
+                className="text-xs font-medium underline"
+              >
+                Download PDF
+              </a>
             </div>
           ))}
         </div>

@@ -1,0 +1,69 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@/components/ui/*": [
+        "./packages/ui/src/components/ui/*"
+      ],
+      "@/lib/utils": [
+        "./packages/ui/src/lib/utils.ts"
+      ],
+      "@/hooks/*": [
+        "./packages/ui/src/hooks/*"
+      ],
+      "@polar-sh/orbit": [
+        "./packages/orbit/src/index.ts"
+      ],
+      "@polar-sh/orbit/theme": [
+        "./packages/orbit/src/tokens/tokens.stylex.ts"
+      ],
+      "@polar-sh/orbit/Box": [
+        "./packages/orbit/src/components/Box.tsx"
+      ],
+      "@polar-sh/orbit/*": [
+        "./packages/orbit/src/*"
+      ],
+      "@polar-sh/currency": [
+        "./packages/currency/src/index.ts"
+      ],
+      "@polar-sh/i18n": [
+        "./packages/i18n/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "packages/*/dist"
+  ]
+}

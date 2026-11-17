@@ -41,6 +41,17 @@ Kobolar provides infrastructure only. The operator is responsible for legal,
 tax and payment-provider obligations. This is stated in the README, UI and
 docs. No tax engine or MoR status is implemented.
 
+## ADR-K09 — Subscription lifecycle follows provider capabilities
+All three providers own their recurring billing cycles natively (Bachs
+recurring products, Paystack Plans, Flutterwave Payment Plans). Kobolar mirrors
+state from signed webhooks (`customer.subscription.*`, `subscription.*`,
+`invoice.*`, `charge.completed`, `subscription.cancelled`) rather than scheduling
+charges. Paystack cancellation requires the `email_token` from
+`subscription.create`, which is stored encrypted-adjacent metadata in the
+subscription row. Failed-payment and cancellation notifications are queued jobs.
+No card-on-file charging is scheduled by default; the `tokenized` capability is
+declared but only used when explicitly enabled per subscription.
+
 ## ADR-K08 — Frontend provenance and rebranding
 Orbit/UI/currency/i18n are adapted from Polar under Apache 2.0 with attribution
 in `ATTRIBUTION.md`. Commercial fonts and all Polar trademarks are removed.

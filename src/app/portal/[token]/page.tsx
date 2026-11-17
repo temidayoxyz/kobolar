@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { customer, invoice, order, subscription } from '@/lib/db/schema'
 import { verifyPortalToken } from '@/lib/portal/token'
 import { format } from '@/lib/money'
+import { CancelSubscriptionButton } from './cancel-button'
 
 export default async function PortalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -65,10 +66,19 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
           {subscriptions.length === 0 && <p className="text-sm text-muted-foreground">No subscriptions yet.</p>}
           {subscriptions.map((sub) => (
             <div key={sub.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
-              <span className="text-sm font-medium capitalize">{sub.status}</span>
-              <span className="text-xs text-muted-foreground">
-                {sub.currentPeriodEnd ? `Renews ${new Date(sub.currentPeriodEnd).toLocaleDateString()}` : '—'}
-              </span>
+              <div>
+                <p className="text-sm font-medium capitalize">{sub.status}</p>
+                <p className="text-xs text-muted-foreground">
+                  {sub.cancelAtPeriodEnd
+                    ? 'Cancels at end of period'
+                    : sub.currentPeriodEnd
+                      ? `Renews ${new Date(sub.currentPeriodEnd).toLocaleDateString()}`
+                      : '—'}
+                </p>
+              </div>
+              {!sub.cancelAtPeriodEnd && sub.status !== 'canceled' && (
+                <CancelSubscriptionButton subscriptionId={sub.id} token={token} />
+              )}
             </div>
           ))}
         </div>

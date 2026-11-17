@@ -128,10 +128,30 @@ export function paystackProvider(credentials: { secretKey: string; webhookSecret
       }
     },
 
-    // Paystack docs were not machine-readable in this session; the exact
-    // disable-subscription contract must be verified before use.
-    async cancelSubscription() {
-      throw new Error('Paystack cancelSubscription: endpoint not yet verified against provider docs')
+    async getSubscription(providerSubscriptionId: string) {
+      const result = (await providerFetch(`${BASE_URL}/subscription/${encodeURIComponent(providerSubscriptionId)}`, {
+        headers: auth,
+      })) as {
+        status: boolean
+        data: { status: string; next_payment_date?: string }
+      }
+      return {
+        status: result.data.status,
+        currentPeriodEnd: result.data.next_payment_date ? new Date(result.data.next_payment_date) : undefined,
+      }
+    },
+
+    // Verified: POST /subscription/disable with { code, token }.
+    // The email token arrives in the subscription.create webhook and must be stored.
+    async cancelSubscription(providerSubscriptionId: string, options?: { token?: string }) {
+      if (!options?.token) {
+        throw new Error('Paystack cancellation requires the email token from subscription.create')
+      }
+      await providerFetch(`${BASE_URL}/subscription/disable`, {
+        method: 'POST',
+        headers: auth,
+        body: { code: providerSubscriptionId, token: options.token },
+      })
     },
   }
 }

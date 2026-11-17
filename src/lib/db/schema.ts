@@ -193,13 +193,23 @@ export const subscription = pgTable('subscription', {
   priceId: uuid('price_id').notNull().references(() => price.id),
   provider: text('provider').notNull(),
   providerSubscriptionId: text('provider_subscription_id').notNull().unique(),
-  status: text('status').notNull(), // active | past_due | canceled | incomplete
+  status: text('status').notNull(), // trialing | active | past_due | unpaid | canceled | incomplete
   currentPeriodStart: timestamp('current_period_start', { withTimezone: true }),
   currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
   canceledAt: timestamp('canceled_at', { withTimezone: true }),
+  // Paystack requires an email token with subscription codes to manage/cancel.
+  managementToken: text('management_token'),
+  // Tokenized recurring providers (card-on-file) store a reusable token here.
+  paymentToken: text('payment_token'),
+  failedAttempts: integer('failed_attempts').notNull().default(0),
+  nextRetryAt: timestamp('next_retry_at', { withTimezone: true }),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
   ...timestamps,
-}, (t) => [index('subscription_customer_idx').on(t.customerId)])
+}, (t) => [
+  index('subscription_customer_idx').on(t.customerId),
+  index('subscription_status_idx').on(t.status),
+])
 
 export const invoice = pgTable('invoice', {
   id: uuid('id').primaryKey().defaultRandom(),

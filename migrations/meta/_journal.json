@@ -8,6 +8,13 @@
       "when": 1794907361815,
       "tag": "0000_chemical_talos",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794909392012,
+      "tag": "0001_brief_doctor_faustus",
+      "breakpoints": true
     }
   ]
 }

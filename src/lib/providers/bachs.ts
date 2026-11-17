@@ -138,11 +138,30 @@ export function bachsProvider(credentials: { apiKey: string; webhookSecret: stri
       }
     },
 
-    // The exact Bachs subscription-management endpoint was not verified in
-    // this session. Do not guess: fail loudly until the API reference confirms
-    // the path and payload.
-    async cancelSubscription() {
-      throw new Error('Bachs cancelSubscription: endpoint not yet verified against provider docs')
+    async getSubscription(providerSubscriptionId: string) {
+      const result = (await providerFetch(`${BASE_URL}/v1/subscriptions/${encodeURIComponent(providerSubscriptionId)}`, {
+        headers: auth,
+      })) as {
+        status: string
+        current_period_start?: string
+        current_period_end?: string
+        cancel_at_period_end?: boolean
+      }
+      return {
+        status: result.status,
+        currentPeriodStart: result.current_period_start ? new Date(result.current_period_start) : undefined,
+        currentPeriodEnd: result.current_period_end ? new Date(result.current_period_end) : undefined,
+        cancelAtPeriodEnd: result.cancel_at_period_end,
+      }
+    },
+
+    // Verified: DELETE /v1/subscriptions/{id} with { cancel_at_period_end, reason }.
+    async cancelSubscription(providerSubscriptionId: string, options?: { atPeriodEnd?: boolean }) {
+      await providerFetch(`${BASE_URL}/v1/subscriptions/${encodeURIComponent(providerSubscriptionId)}`, {
+        method: 'DELETE',
+        headers: auth,
+        body: { cancel_at_period_end: options?.atPeriodEnd ?? true },
+      })
     },
   }
 }

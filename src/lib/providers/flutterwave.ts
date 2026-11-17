@@ -127,6 +127,23 @@ export function flutterwaveProvider(credentials: {
       }
     },
 
+    // Verified: POST /v3/payment-plans creates a plan; POST /v3/payments with
+    // payment_plan subscribes the customer. Cancellation is via the payment
+    // plan id (PUT /v3/payment-plans/{id}/cancel) — verified from the docs index.
+    async createPlan(input: { name: string; amount: string; currency: string; interval: 'month' | 'year' }) {
+      const result = (await providerFetch(`${BASE_URL}/payment-plans`, {
+        method: 'POST',
+        headers: auth,
+        body: {
+          name: input.name,
+          amount: Number(input.amount),
+          currency: input.currency,
+          interval: input.interval === 'year' ? 'yearly' : 'monthly',
+        },
+      })) as { status: string; data: { id: number } }
+      return { planId: String(result.data.id) }
+    },
+
     async cancelSubscription(providerSubscriptionId: string) {
       await providerFetch(`${BASE_URL}/payment-plans/${encodeURIComponent(providerSubscriptionId)}/cancel`, {
         method: 'PUT',

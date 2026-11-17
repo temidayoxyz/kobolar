@@ -82,11 +82,15 @@ export interface PaymentProvider {
   refund?(input: RefundInput): Promise<RefundResult>
 
   /** Native recurring providers only. */
-  cancelSubscription?(providerSubscriptionId: string): Promise<void>
+  cancelSubscription?(providerSubscriptionId: string, options?: { atPeriodEnd?: boolean; token?: string }): Promise<void>
   getSubscription?(providerSubscriptionId: string): Promise<{
     status: string
     currentPeriodEnd?: Date
+    currentPeriodStart?: Date
+    cancelAtPeriodEnd?: boolean
   }>
+  /** Create a plan/price object on the provider for recurring billing. */
+  createPlan?(input: { name: string; amount: string; currency: string; interval: 'month' | 'year' }): Promise<{ planId: string }>
 
   /** Tokenized recurring providers only. */
   createCharge?(token: string, amount: string, currency: string, reference: string): Promise<ProviderPayment>

@@ -26,9 +26,15 @@ capability detection; hosted checkout; idempotent webhook intake →
 server-verified order/payment/invoice/receipt; customer portal with signed
 tokens and downloadable PDF invoices.
 
-Next phases: subscription renewal processing and cancellation, admin dashboard
-UI for products and customers, per-platform deployment verification, security
-review, sandbox payment tests, and open-source release preparation.
+Also implemented: subscription lifecycle from verified provider webhooks
+(Bachs/Paystack/Flutterwave), admin and customer-initiated cancellation routed
+to the active provider, subscription failure/cancellation notifications, and a
+full admin dashboard (overview, products, customers, orders, subscriptions,
+settings) plus a customer portal with self-service cancellation.
+
+Next phases: per-platform deployment verification, security review, sandbox
+payment and webhook tests, backup/restore documentation, and open-source
+release preparation.
 
 **Important:** provider adapters were written against each provider's published
 API contract. Bachs and Flutterwave were verified from their live docs in this

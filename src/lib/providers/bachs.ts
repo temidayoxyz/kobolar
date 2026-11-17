@@ -138,11 +138,11 @@ export function bachsProvider(credentials: { apiKey: string; webhookSecret: stri
       }
     },
 
-    async cancelSubscription(providerSubscriptionId: string) {
-      await providerFetch(`${BASE_URL}/v1/subscriptions/${encodeURIComponent(providerSubscriptionId)}/cancel`, {
-        method: 'POST',
-        headers: auth,
-      })
+    // The exact Bachs subscription-management endpoint was not verified in
+    // this session. Do not guess: fail loudly until the API reference confirms
+    // the path and payload.
+    async cancelSubscription() {
+      throw new Error('Bachs cancelSubscription: endpoint not yet verified against provider docs')
     },
   }
 }

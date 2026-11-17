@@ -128,12 +128,10 @@ export function paystackProvider(credentials: { secretKey: string; webhookSecret
       }
     },
 
-    async cancelSubscription(providerSubscriptionId: string) {
-      await providerFetch(`${BASE_URL}/subscription/${encodeURIComponent(providerSubscriptionId)}`, {
-        method: 'POST',
-        headers: auth,
-        body: { code: providerSubscriptionId },
-      })
+    // Paystack docs were not machine-readable in this session; the exact
+    // disable-subscription contract must be verified before use.
+    async cancelSubscription() {
+      throw new Error('Paystack cancelSubscription: endpoint not yet verified against provider docs')
     },
   }
 }

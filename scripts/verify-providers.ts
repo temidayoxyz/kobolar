@@ -89,21 +89,14 @@ async function verifyPaystack(key: string): Promise<CheckResult> {
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: 'verify@kobolar.dev',
-        amount: 100,
+        // Paystack silently rejects amounts under its ₦100 minimum with a
+        // misleading "No active channel" error. Use the minimum valid amount.
+        amount: 10000,
         currency: 'NGN',
         reference: `kbo_verify_${Date.now()}`,
       }),
     })
     const data = body as { status?: boolean; message?: string; data?: { authorization_url?: string; reference?: string } }
-    // "No active channel" means the request shape was accepted but the merchant
-    // has not enabled a test payment channel yet — an account setup issue, not
-    // an adapter mismatch. Treat it as a skip with a clear instruction.
-    if (typeof data.message === 'string' && /no active channel/i.test(data.message)) {
-      return {
-        provider: 'paystack', ok: false, skipped: true,
-        detail: 'request accepted; enable a test payment channel in your Paystack dashboard, then re-run',
-      }
-    }
     const ok = status === 200 && data.status === true && typeof data.data?.authorization_url === 'string'
     return { provider: 'paystack', ok, detail: ok ? `reference=${data.data?.reference}` : `status=${status} body=${JSON.stringify(body).slice(0, 250)}` }
   } catch (error) {
